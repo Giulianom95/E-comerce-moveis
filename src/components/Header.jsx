@@ -105,9 +105,9 @@ const Header = () => {
                   size="icon"
                   onClick={handleSignOut}
                   className="hover:bg-pink-50 text-pink-600"
-                  title="Sair"
+                  title="Perfil"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <User className="w-5 h-5" />
                 </Button>
               </motion.div>
             ) : (

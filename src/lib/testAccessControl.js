@@ -1,5 +1,26 @@
 import { supabaseTest } from './supabaseTestClient';
 
+async function setupAdminUser() {
+  try {
+    // Tentar fazer login com o usuário admin existente
+    const { data: signInData, error: signInError } = await supabaseTest.auth.signInWithPassword({
+      email: 'admin@admin.com',
+      password: 'admin@admin.com'
+    });
+
+    if (signInError) {
+      console.error('❌ Erro ao fazer login como admin:', signInError.message);
+      return false;
+    }
+
+    console.log('✅ Login como admin realizado com sucesso');
+    return true;
+  } catch (error) {
+    console.error('❌ Erro ao acessar conta admin:', error.message);
+    return false;
+  }
+}
+
 async function testAccessControl() {
   try {
     console.log('🔄 Testando controle de acesso...\n');
@@ -49,24 +70,18 @@ async function testAccessControl() {
       }
     }
 
-    // Teste 3: Verificar se o usuário admin@admin.com tem acesso especial
-    console.log('\n3️⃣ Verificando privilégios de admin...');
-    const { data: adminSession, error: signInError } = await supabaseTest.auth.signInWithPassword({
-      email: 'admin@admin.com',
-      password: 'admin123'  // Substitua pela senha correta
-    });
+    // Teste 3: Configurar e testar usuário admin
+    console.log('\n3️⃣ Configurando e testando privilégios de admin...');
+    const adminConfigured = await setupAdminUser();
 
-    if (signInError) {
-      console.log('❌ Não foi possível testar privilégios de admin:', signInError.message);
-    } else {
-      console.log('✅ Login como admin realizado com sucesso');
-      
+    if (adminConfigured) {
       // Tentar adicionar um produto como admin
       const adminProduct = {
         name: 'Teste Admin',
         description: 'Este produto deve ser adicionado',
         price: 100,
-        stock: 1
+        stock: 1,
+        category: 'teste'
       };
 
       const { data: adminInsert, error: adminInsertError } = await supabaseTest
@@ -84,6 +99,7 @@ async function testAccessControl() {
             .from('products')
             .delete()
             .eq('id', adminInsert[0].id);
+          console.log('✅ Produto de teste removido com sucesso');
         }
       }
     }

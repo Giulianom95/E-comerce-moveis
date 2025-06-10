@@ -4,6 +4,8 @@ import { toast } from '@/components/ui/use-toast';
 
 const AuthContext = createContext(null);
 
+const ADMIN_USER_ID = '6e129b7f-1f58-42f9-912c-0da648ce4409';
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -29,7 +31,8 @@ export const AuthProvider = ({ children }) => {
         setIsAdmin(false);
       } else {
         setProfile(userProfile); 
-        setIsAdmin(userProfile?.role === 'admin');
+        // Verifica se o usuário é admin pelo ID específico
+        setIsAdmin(userId === ADMIN_USER_ID);
       }
     } catch (e) {
       console.error('Exception fetching profile:', e);
