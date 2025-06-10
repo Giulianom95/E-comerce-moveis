@@ -8,37 +8,8 @@ import Footer from '@/components/Footer';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import ChatWidget from '@/components/ChatWidget';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
-
-// Error Boundary para capturar erros globais
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error('Erro capturado pelo ErrorBoundary:', error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', flexDirection: 'column', textAlign: 'center' }}>
-          <h1 style={{ color: '#dc2626', fontSize: 24, marginBottom: 16 }}>⚠️ Erro ao carregar a aplicação</h1>
-          <p style={{ color: '#374151', marginBottom: 16 }}>Ocorreu um erro inesperado.<br/>Verifique o console do navegador para detalhes.<br/>Se persistir, confira as variáveis de ambiente no painel da Vercel.</p>
-          <button onClick={() => window.location.reload()} style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 16 }}>Recarregar</button>
-        </div>
-      );
-    }
-
-    return this.props.children;
-  }
-}
 
 // Lazy loading das páginas
 const HomePage = React.lazy(() => import('@/pages/HomePage'));

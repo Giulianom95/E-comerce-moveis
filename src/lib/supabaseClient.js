@@ -1,53 +1,101 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Logs de debug para ambiente e variáveis
+console.log('🔧 Ambiente:', import.meta.env.MODE);
+console.log('🔑 Variáveis de ambiente carregadas:', {
+  url: import.meta.env.VITE_SUPABASE_URL ? 'Definida' : 'Indefinida',
+  key: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Definida' : 'Indefinida'
+});
+
+// Implementar fallback para variáveis de ambiente em desenvolvimento
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('As variáveis de ambiente do Supabase são obrigatórias. Configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
+// Cliente mock para casos de erro
+const mockClient = {
+  auth: {
+    signIn: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
+    signOut: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
+  },
+  from: () => ({
+    select: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
+  }),
+  storage: {
+    from: () => ({
+      upload: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
+      getPublicUrl: () => ({ data: { publicUrl: null } }),
+    }),
+  },
+};
+
+let supabase;
+
+try {
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('❌ Variáveis de ambiente do Supabase não encontradas');
+    throw new Error('As variáveis de ambiente do Supabase são obrigatórias');
+  }
+
+  supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+      storage: window?.localStorage,
+      storageKey: 'supabase_auth',
+      sessionTimeout: 14400,
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 10
+      },
+      reconnect: true,
+      timeout: 10000,
+      retries: 3
+    },
+    autoRefreshTime: 13500000,
+    persistSession: true,
+    headers: {
+      'X-Client-Info': 'e-commerce-moveis'
+    },
+    shouldThrowOnError: false // Mudado para false para evitar crashes
+  });
+
+  // Monitor de status da conexão com retry
+  let connectionAttempts = 0;
+  const MAX_CONNECTION_ATTEMPTS = 3;
+
+  supabase.realtime.on('disconnected', () => {
+    console.warn(`⚠️ Conexão com Supabase perdida. Tentativa ${connectionAttempts + 1}/${MAX_CONNECTION_ATTEMPTS}`);
+    
+    if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
+      connectionAttempts++;
+      setTimeout(() => {
+        console.info('🔄 Tentando reconectar ao Supabase...');
+        supabase.realtime.connect();
+      }, 1000 * connectionAttempts);
+    } else {
+      console.error('❌ Número máximo de tentativas de reconexão atingido');
+    }
+  });
+
+  supabase.realtime.on('connected', () => {
+    console.info('✅ Conexão com Supabase estabelecida');
+    connectionAttempts = 0;
+  });
+
+  // Teste inicial de conexão
+  supabase.realtime.connect();
+
+} catch (error) {
+  console.error('❌ Erro ao inicializar Supabase:', error);
+  console.warn('⚠️ Usando cliente mock para evitar quebra da aplicação');
+  supabase = mockClient;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-    storage: window.localStorage,
-    storageKey: 'supabase_auth',
-    // Define um tempo maior para a sessão (4 horas)
-    sessionTimeout: 14400, // 4 horas em segundos
-  },
-  // Configurações adicionais do cliente
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    },
-    // Configurações de reconexão
-    reconnect: true,
-    timeout: 10000, // 10 segundos
-    retries: 3
-  },
-  // Define um tempo maior para o refresh do token (3 horas e 45 minutos)
-  autoRefreshTime: 13500000, // 3.75 horas em milissegundos
-  persistSession: true,
-  // Configurações de rede
-  headers: {
-    'X-Client-Info': 'e-commerce-moveis'
-  },
-  // Configurações de cache
-  shouldThrowOnError: true, // Lança erros em vez de retornar { error }
-});
+export { supabase };
 
-// Monitor de status da conexão
-supabase.realtime.on('disconnected', () => {
-  console.warn('⚠️ Conexão com Supabase perdida. Tentando reconectar...');
-});
-
-supabase.realtime.on('connected', () => {
-  console.info('✅ Conexão com Supabase estabelecida');
-});
-
-// Funções de upload
+// Funções de upload com tratamento de erro aprimorado
 export const uploadProductImage = async (file, fileName, onProgress) => {
   const MAX_RETRIES = 3;
   let attempt = 0;
