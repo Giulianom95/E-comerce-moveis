@@ -10,6 +10,7 @@ import AdminRoute from '@/components/AdminRoute';
 import ChatWidget from '@/components/ChatWidget';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
+import { ConnectionError } from '@/components/ConnectionError';
 
 // Lazy loading das páginas
 const HomePage = React.lazy(() => import('@/pages/HomePage'));
@@ -52,6 +53,7 @@ function App() {
                   </Suspense>
                 </main>
                 <Footer />
+                <ConnectionError />
                 <Toaster />
                 <ChatWidget />
               </div>

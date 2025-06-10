@@ -1,27 +1,60 @@
-// Validação das variáveis de ambiente durante o build
-const requiredEnvVars = [
-  { name: 'VITE_SUPABASE_URL', value: 'https://epxankmtukyjyybltajm.supabase.co' },
-  { name: 'VITE_SUPABASE_ANON_KEY', value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVweGFua210dWt5anl5Ymx0YWptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk1MjMxODcsImV4cCI6MjA2NTA5OTE4N30.AWZbb2v6-lRgmqoXVJEyfa8CPIuf3WHpT2yljz-Hgc8' }
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import chalk from 'chalk';
+
+dotenv.config();
+
+const required = [
+  'VITE_SUPABASE_URL',
+  'VITE_SUPABASE_ANON_KEY'
 ];
 
-const missingVars = requiredEnvVars.filter(({ name, value }) => {
-  const envValue = process.env[name] || value;
-  if (!envValue) {
-    console.warn(`⚠️ Variável de ambiente ${name} não encontrada no processo.`);
-    console.warn('Usando valor padrão como fallback.');
-    process.env[name] = value;
-    return false;
+async function validateEnv() {
+  console.log(chalk.blue('🔍 Validando variáveis de ambiente...'));
+  
+  const missing = required.filter(key => !process.env[key]);
+  
+  if (missing.length > 0) {
+    console.error(chalk.red('❌ Variáveis de ambiente ausentes:'));
+    missing.forEach(key => {
+      console.error(chalk.red(`   - ${key}`));
+    });
+    process.exit(1);
   }
-  return false;
-});
 
-if (missingVars.length > 0 && process.env.NODE_ENV === 'development') {
-  console.error('\n❌ Erro: Variáveis de ambiente ausentes em desenvolvimento!');
-  console.error('As seguintes variáveis de ambiente são necessárias:');
-  missingVars.forEach(varName => {
-    console.error(`- ${varName}`);
-  });
-  process.exit(1);
-} else {
-  console.log('✅ Verificação de variáveis de ambiente concluída!');
+  console.log(chalk.green('✅ Todas as variáveis de ambiente necessárias estão presentes'));
+  
+  console.log(chalk.blue('🔍 Testando conexão com Supabase...'));
+  
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.VITE_SUPABASE_ANON_KEY
+    );
+
+    const { data, error } = await supabase
+      .from('products')
+      .select('count', { count: 'exact', head: true });
+
+    if (error) {
+      throw error;
+    }
+
+    console.log(chalk.green('✅ Conexão com Supabase estabelecida com sucesso'));
+    
+  } catch (error) {
+    console.error(chalk.red('❌ Erro ao conectar com Supabase:'));
+    console.error(chalk.red(`   ${error.message}`));
+    console.error(chalk.yellow('\nPossíveis soluções:'));
+    console.error(chalk.yellow('1. Verifique se as credenciais do Supabase estão corretas'));
+    console.error(chalk.yellow('2. Verifique se o projeto Supabase está online'));
+    console.error(chalk.yellow('3. Verifique sua conexão com a internet'));
+    process.exit(1);
+  }
 }
+
+validateEnv().catch(error => {
+  console.error(chalk.red('❌ Erro durante a validação:'));
+  console.error(chalk.red(error));
+  process.exit(1);
+});

@@ -2,7 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 
 // Logs de debug para ambiente e variáveis
 console.log('🔧 Ambiente:', import.meta.env.MODE);
-console.log('🔑 Variáveis de ambiente carregadas:', {
+console.log('🌐 URL Base:', import.meta.env.VITE_SUPABASE_URL);
+console.log('🔑 Variáveis de ambiente:', {
   url: import.meta.env.VITE_SUPABASE_URL ? 'Definida' : 'Indefinida',
   key: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Definida' : 'Indefinida'
 });
@@ -11,14 +12,39 @@ console.log('🔑 Variáveis de ambiente carregadas:', {
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+// Função para testar a conexão
+const testConnection = async (client) => {
+  try {
+    const { data, error } = await client.from('products').select('count', { count: 'exact', head: true });
+    
+    if (error) {
+      console.error('❌ Erro ao testar conexão:', error.message);
+      throw error;
+    }
+    
+    console.info('✅ Conexão com banco de dados testada com sucesso');
+    return true;
+  } catch (error) {
+    console.error('❌ Falha no teste de conexão:', error);
+    return false;
+  }
+};
+
 // Cliente mock para casos de erro
 const mockClient = {
   auth: {
     signIn: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
     signOut: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
+    onAuthStateChange: (callback) => {
+      console.warn('⚠️ Usando cliente mock - autenticação indisponível');
+      return { unsubscribe: () => {} };
+    }
   },
   from: () => ({
     select: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
+    insert: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
+    update: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
+    delete: () => Promise.reject(new Error('Cliente Supabase não inicializado corretamente')),
   }),
   storage: {
     from: () => ({
@@ -36,6 +62,8 @@ try {
     throw new Error('As variáveis de ambiente do Supabase são obrigatórias');
   }
 
+  console.info('🔄 Inicializando cliente Supabase...');
+  
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
       autoRefreshToken: true,
@@ -53,44 +81,63 @@ try {
       timeout: 10000,
       retries: 3
     },
-    autoRefreshTime: 13500000,
-    persistSession: true,
-    headers: {
-      'X-Client-Info': 'e-commerce-moveis'
+    db: {
+      schema: 'public'
     },
-    shouldThrowOnError: false // Mudado para false para evitar crashes
+    global: {
+      fetch: fetch.bind(globalThis),
+      headers: {
+        'X-Client-Info': 'e-commerce-moveis',
+        'X-Client-Site': window?.location?.hostname
+      }
+    }
   });
 
   // Monitor de status da conexão com retry
   let connectionAttempts = 0;
   const MAX_CONNECTION_ATTEMPTS = 3;
 
-  supabase.realtime.on('disconnected', () => {
+  supabase.realtime.on('disconnected', async () => {
     console.warn(`⚠️ Conexão com Supabase perdida. Tentativa ${connectionAttempts + 1}/${MAX_CONNECTION_ATTEMPTS}`);
     
     if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
       connectionAttempts++;
-      setTimeout(() => {
+      setTimeout(async () => {
         console.info('🔄 Tentando reconectar ao Supabase...');
-        supabase.realtime.connect();
-      }, 1000 * connectionAttempts);
+        await supabase.realtime.connect();
+        const isConnected = await testConnection(supabase);
+        if (!isConnected && connectionAttempts === MAX_CONNECTION_ATTEMPTS) {
+          console.error('❌ Falha na reconexão após todas as tentativas');
+          window.dispatchEvent(new CustomEvent('supabase:connection-failed'));
+        }
+      }, 1000 * Math.pow(2, connectionAttempts)); // Exponential backoff
     } else {
       console.error('❌ Número máximo de tentativas de reconexão atingido');
+      window.dispatchEvent(new CustomEvent('supabase:connection-failed'));
     }
   });
 
   supabase.realtime.on('connected', () => {
     console.info('✅ Conexão com Supabase estabelecida');
     connectionAttempts = 0;
+    window.dispatchEvent(new CustomEvent('supabase:connected'));
   });
 
   // Teste inicial de conexão
-  supabase.realtime.connect();
+  testConnection(supabase).then(isConnected => {
+    if (!isConnected) {
+      console.error('❌ Falha no teste inicial de conexão');
+      window.dispatchEvent(new CustomEvent('supabase:connection-failed'));
+    }
+  });
 
 } catch (error) {
   console.error('❌ Erro ao inicializar Supabase:', error);
   console.warn('⚠️ Usando cliente mock para evitar quebra da aplicação');
   supabase = mockClient;
+  window.dispatchEvent(new CustomEvent('supabase:initialization-failed', { 
+    detail: { error: error.message } 
+  }));
 }
 
 export { supabase };
