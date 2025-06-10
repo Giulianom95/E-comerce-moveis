@@ -19,10 +19,10 @@ import ChatWidget from '@/components/ChatWidget';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <ProductProvider>
-          <CartProvider>
+    <AuthProvider>
+      <ProductProvider>
+        <CartProvider>
+          <Router>
             <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 flex flex-col">
               <Header />
               <main className="flex-1">
