@@ -22,6 +22,23 @@ const LoginPage = React.lazy(() => import('@/pages/LoginPage'));
 const SignUpPage = React.lazy(() => import('@/pages/SignUpPage'));
 const AdminPage = React.lazy(() => import('@/pages/AdminPage'));
 
+// Componente de diagnóstico
+const DevTools = () => {
+  if (import.meta.env.PROD) return null;
+  
+  return (
+    <div className="fixed bottom-4 left-4 z-50 bg-gray-800 text-white p-4 rounded-lg opacity-75 hover:opacity-100 transition-opacity text-sm">
+      <h3 className="font-bold mb-2">Dev Diagnostics</h3>
+      <div>
+        <p>ENV: {import.meta.env.MODE}</p>
+        <p>Base URL: {import.meta.env.BASE_URL}</p>
+        <p>Supabase URL: {import.meta.env.VITE_SUPABASE_URL ? '✅' : '❌'}</p>
+        <p>Supabase Key: {import.meta.env.VITE_SUPABASE_ANON_KEY ? '✅' : '❌'}</p>
+      </div>
+    </div>
+  );
+};
+
 function App() {
   return (
     <ErrorBoundary>
@@ -54,6 +71,7 @@ function App() {
                 </main>
                 <Footer />
                 <ConnectionError />
+                <DevTools />
                 <Toaster />
                 <ChatWidget />
               </div>

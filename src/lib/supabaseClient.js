@@ -1,34 +1,40 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Logs de debug para ambiente e variáveis
-console.log('🔧 Ambiente:', import.meta.env.MODE);
-console.log('🌐 URL Base:', import.meta.env.VITE_SUPABASE_URL);
-console.log('🔑 Variáveis de ambiente:', {
-  url: import.meta.env.VITE_SUPABASE_URL ? 'Definida' : 'Indefinida',
-  key: import.meta.env.VITE_SUPABASE_ANON_KEY ? 'Definida' : 'Indefinida'
-});
-
-// Implementar fallback para variáveis de ambiente em desenvolvimento
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Função para testar a conexão
-const testConnection = async (client) => {
+// Função para validar URL
+const isValidUrl = (url) => {
   try {
-    const { data, error } = await client.from('products').select('count', { count: 'exact', head: true });
-    
-    if (error) {
-      console.error('❌ Erro ao testar conexão:', error.message);
-      throw error;
-    }
-    
-    console.info('✅ Conexão com banco de dados testada com sucesso');
+    new URL(url);
     return true;
-  } catch (error) {
-    console.error('❌ Falha no teste de conexão:', error);
+  } catch {
     return false;
   }
 };
+
+// Debug detalhado do ambiente
+console.group('🔍 Diagnóstico de Inicialização');
+console.log('🌐 Ambiente:', {
+  mode: import.meta.env.MODE,
+  dev: import.meta.env.DEV,
+  prod: import.meta.env.PROD,
+  base: import.meta.env.BASE_URL
+});
+
+// Validação detalhada das variáveis
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+console.log('🔑 Variáveis Supabase:', {
+  url: {
+    defined: !!supabaseUrl,
+    valid: isValidUrl(supabaseUrl),
+    value: supabaseUrl ? `${supabaseUrl.substring(0, 8)}...` : undefined
+  },
+  key: {
+    defined: !!supabaseAnonKey,
+    valid: !!supabaseAnonKey && supabaseAnonKey.length > 20,
+    length: supabaseAnonKey?.length
+  }
+});
 
 // Cliente mock para casos de erro
 const mockClient = {
@@ -57,12 +63,16 @@ const mockClient = {
 let supabase;
 
 try {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('❌ Variáveis de ambiente do Supabase não encontradas');
-    throw new Error('As variáveis de ambiente do Supabase são obrigatórias');
+  // Validação mais rigorosa
+  if (!supabaseUrl || !isValidUrl(supabaseUrl)) {
+    throw new Error('URL do Supabase inválida ou não definida');
+  }
+  
+  if (!supabaseAnonKey || supabaseAnonKey.length < 20) {
+    throw new Error('Chave anônima do Supabase inválida ou não definida');
   }
 
-  console.info('🔄 Inicializando cliente Supabase...');
+  console.log('🔄 Inicializando cliente Supabase...');
   
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -98,7 +108,10 @@ try {
   const MAX_CONNECTION_ATTEMPTS = 3;
 
   supabase.realtime.on('disconnected', async () => {
-    console.warn(`⚠️ Conexão com Supabase perdida. Tentativa ${connectionAttempts + 1}/${MAX_CONNECTION_ATTEMPTS}`);
+    console.warn(`⚠️ Conexão perdida [${connectionAttempts + 1}/${MAX_CONNECTION_ATTEMPTS}]`, {
+      lastError: supabase.realtime.lastError,
+      currentState: supabase.realtime.state
+    });
     
     if (connectionAttempts < MAX_CONNECTION_ATTEMPTS) {
       connectionAttempts++;
@@ -118,26 +131,42 @@ try {
   });
 
   supabase.realtime.on('connected', () => {
-    console.info('✅ Conexão com Supabase estabelecida');
+    console.info('✅ Conexão estabelecida', {
+      session: !!supabase.auth.session,
+      realtimeState: supabase.realtime.state
+    });
     connectionAttempts = 0;
     window.dispatchEvent(new CustomEvent('supabase:connected'));
   });
 
-  // Teste inicial de conexão
+  // Teste inicial de conexão com timeout
+  const connectionTimeout = setTimeout(() => {
+    console.error('❌ Timeout no teste de conexão');
+    window.dispatchEvent(new CustomEvent('supabase:connection-failed'));
+  }, 5000);
+
   testConnection(supabase).then(isConnected => {
+    clearTimeout(connectionTimeout);
     if (!isConnected) {
-      console.error('❌ Falha no teste inicial de conexão');
+      console.error('❌ Falha no teste de conexão');
       window.dispatchEvent(new CustomEvent('supabase:connection-failed'));
     }
   });
 
 } catch (error) {
-  console.error('❌ Erro ao inicializar Supabase:', error);
-  console.warn('⚠️ Usando cliente mock para evitar quebra da aplicação');
+  console.error('❌ Erro de inicialização:', {
+    message: error.message,
+    stack: error.stack?.split('\n')[0],
+    url: supabaseUrl ? `${supabaseUrl.substring(0, 8)}...` : 'undefined'
+  });
+  
+  console.warn('⚠️ Usando cliente mock');
   supabase = mockClient;
   window.dispatchEvent(new CustomEvent('supabase:initialization-failed', { 
     detail: { error: error.message } 
   }));
+} finally {
+  console.groupEnd();
 }
 
 export { supabase };
