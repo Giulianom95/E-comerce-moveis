@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { uploadProductImage } from '@/lib/supabaseClient';
+import { validateAndCompressImage } from '@/lib/imageUtils';
 
 const definedCategories = ['utilidades', 'roupeiros', 'comodas', 'mesa', 'cadeira', 'sofa', 'decoracao', 'camas', 'armarios'];
 
@@ -32,6 +33,8 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
   });
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(formData.image_url || null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
   const { user } = useAuth();
 
   const handleChange = (e) => {
@@ -43,8 +46,30 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
     setFormData(prev => ({ ...prev, category: value }));
   };
 
+  const handleImageChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      try {
+        // Validar e comprimir a imagem
+        const processedFile = await validateAndCompressImage(file);
+        setSelectedFile(processedFile);
+        
+        // Criar preview local
+        const previewUrl = URL.createObjectURL(processedFile);
+        setImagePreview(previewUrl);
+      } catch (error) {
+        toast({
+          title: "Erro ao processar imagem",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsUploading(true);
     try {
       if (!formData.name || !formData.price || !formData.category || !formData.stock_quantity) {
         toast({ 
@@ -57,21 +82,22 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
 
       let imageUrl = formData.image_url;
       
-      // Se temos um novo arquivo selecionado, vamos fazer o upload
       if (selectedFile) {
-        // Criar nome único para o arquivo
         const fileName = `${Date.now()}-${formData.name.toLowerCase().replace(/ /g, '-')}.jpg`;
-        
-        // Fazer upload e obter URL pública
-        imageUrl = await uploadProductImage(selectedFile, fileName);
+        imageUrl = await uploadProductImage(selectedFile, fileName, (progress) => {
+          setUploadProgress(progress);
+        });
       }
 
-      // Enviar dados do produto com a URL da imagem do Storage
       await onSubmit({ 
         ...formData, 
         image_url: imageUrl,
         added_by: user.id 
       });
+
+      // Limpar estados após sucesso
+      setUploadProgress(0);
+      setIsUploading(false);
 
     } catch (error) {
       console.error('Erro ao salvar produto:', error);
@@ -80,6 +106,7 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
         description: "Ocorreu um erro ao salvar o produto. Tente novamente.", 
         variant: "destructive"
       });
+      setIsUploading(false);
     }
   };
 
@@ -134,22 +161,26 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
           <Input id="stock_quantity" name="stock_quantity" type="number" value={formData.stock_quantity} onChange={handleChange} required />
         </div>
         <div>
-          <Label htmlFor="image">Imagem do Produto</Label>
+          <Label htmlFor="image">Imagem do Produto (JPEG/JPG até 5MB)</Label>
           <Input 
             id="image" 
             name="image" 
             type="file" 
             accept="image/jpeg,image/jpg"
-            onChange={(e) => {
-              const file = e.target.files[0];
-              if (file) {
-                setSelectedFile(file);
-                // Criar preview local
-                const previewUrl = URL.createObjectURL(file);
-                setImagePreview(previewUrl);
-              }
-            }}
+            onChange={handleImageChange}
+            disabled={isUploading}
           />
+          {isUploading && uploadProgress > 0 && (
+            <div className="mt-2">
+              <div className="w-full bg-gray-200 rounded-full h-2.5">
+                <div 
+                  className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                  style={{ width: `${uploadProgress}%` }}
+                ></div>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">Upload: {uploadProgress}%</p>
+            </div>
+          )}
           {imagePreview && (
             <div className="mt-2">
               <img 

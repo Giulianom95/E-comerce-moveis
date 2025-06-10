@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = 'https://zvvkpitdjefpltrifvqz.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2dmtpaXRkamVmcGx0cmlmdnF6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4ODExNzQsImV4cCI6MjA2NDQ1NzE3NH0.0Uife_sCzS_i2IvbVFNfiPZPlu0dlwKPxZQZ6T3Vgjk';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
@@ -23,24 +23,44 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   autoRefreshTime: 13500000, // 3.75 horas em milissegundos
 });
 
-export const uploadProductImage = async (file, fileName) => {
-  try {
-    const { data, error } = await supabase.storage
-      .from('product-images')
-      .upload(`produtos/${fileName}`, file, {
-        cacheControl: '3600',
-        upsert: true
-      });
+export const uploadProductImage = async (file, fileName, onProgress) => {
+  const MAX_RETRIES = 3;
+  let attempt = 0;
 
-    if (error) throw error;
+  while (attempt < MAX_RETRIES) {
+    try {
+      // Configurar o upload com progresso
+      const { data, error } = await supabase.storage
+        .from('product-images')
+        .upload(`produtos/${fileName}`, file, {
+          cacheControl: '3600',
+          upsert: true,
+          onUploadProgress: (progress) => {
+            if (onProgress) {
+              const percentage = (progress.loaded / progress.total) * 100;
+              onProgress(Math.round(percentage));
+            }
+          },
+        });
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(`produtos/${fileName}`);
+      if (error) throw error;
 
-    return publicUrl;
-  } catch (error) {
-    console.error('Erro ao fazer upload da imagem:', error);
-    throw error;
+      // Obter URL pública
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(`produtos/${fileName}`);
+
+      return publicUrl;
+    } catch (error) {
+      attempt++;
+      if (attempt === MAX_RETRIES) {
+        console.error('Erro ao fazer upload da imagem após várias tentativas:', error);
+        throw new Error(
+          'Não foi possível fazer o upload da imagem. Por favor, tente novamente ou use uma imagem diferente.'
+        );
+      }
+      // Esperar antes de tentar novamente
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
   }
 };
