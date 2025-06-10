@@ -14,12 +14,8 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  if (!user) {
+  if (!user || user.email !== 'admin@admin.com') {
     return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  if (!isAdmin) {
-     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   return children;

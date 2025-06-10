@@ -1,151 +1,165 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from './AuthContext';
 import { toast } from '@/components/ui/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 
 const ProductContext = createContext(null);
 
 export const ProductProvider = ({ children }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  const fetchProducts = async () => {
     try {
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (fetchError) throw fetchError;
+      if (error) throw error;
       setProducts(data || []);
-    } catch (e) {
-      console.error("Error fetching products:", e);
-      setError(e.message);
+    } catch (error) {
+      console.error('Erro ao carregar produtos:', error);
       toast({
-        title: 'Erro ao carregar produtos',
-        description: e.message,
-        variant: 'destructive',
+        title: "Erro ao carregar produtos",
+        description: error.message,
+        variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
+
+  const addProduct = async (productData) => {
+    if (!isAdmin) {
+      toast({
+        title: "Acesso negado",
+        description: "Apenas administradores podem adicionar produtos",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([productData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProducts(prev => [data, ...prev]);
+      toast({
+        title: "Produto adicionado",
+        description: "O produto foi adicionado com sucesso!",
+      });
+      return data;
+    } catch (error) {
+      console.error('Erro ao adicionar produto:', error);
+      toast({
+        title: "Erro ao adicionar produto",
+        description: error.message,
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  const updateProduct = async (id, updates) => {
+    if (!isAdmin) {
+      toast({
+        title: "Acesso negado",
+        description: "Apenas administradores podem atualizar produtos",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProducts(prev => prev.map(p => p.id === id ? data : p));
+      toast({
+        title: "Produto atualizado",
+        description: "O produto foi atualizado com sucesso!",
+      });
+      return true;
+    } catch (error) {
+      console.error('Erro ao atualizar produto:', error);
+      toast({
+        title: "Erro ao atualizar produto",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
+  const deleteProduct = async (id) => {
+    if (!isAdmin) {
+      toast({
+        title: "Acesso negado",
+        description: "Apenas administradores podem deletar produtos",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setProducts(prev => prev.filter(p => p.id !== id));
+      toast({
+        title: "Produto removido",
+        description: "O produto foi removido com sucesso!",
+      });
+      return true;
+    } catch (error) {
+      console.error('Erro ao deletar produto:', error);
+      toast({
+        title: "Erro ao deletar produto",
+        description: error.message,
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
 
   useEffect(() => {
     fetchProducts();
-  }, [fetchProducts]);
+  }, []);
 
-  const addProduct = async (productData) => {
-    if (!user?.email?.includes('@admin')) {
-      toast({ title: 'Não autorizado', description: 'Apenas administradores podem adicionar produtos.', variant: 'destructive' });
-      return null;
-    }
-    try {
-      const productPayload = {
-        ...productData,
-        price: parseFloat(productData.price),
-        stock_quantity: parseInt(productData.stock_quantity, 10),
-      };
-
-      const { data, error: insertError } = await supabase
-        .from('products')
-        .insert([productPayload])
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-      
-      setProducts(prev => [data, ...prev]);
-      toast({ title: 'Sucesso!', description: 'Produto adicionado.' });
-      return data;
-    } catch (e) {
-      console.error("Error adding product:", e);
-      toast({ title: 'Erro ao adicionar produto', description: e.message, variant: 'destructive' });
-      return null;
-    }
-  };
-
-  const updateProduct = async (productId, productData) => {
-     if (!user) {
-      toast({ title: 'Não autorizado', description: 'Você precisa estar logado.', variant: 'destructive' });
-      return null;
-    }
-    try {
-      const productPayload = {
-        ...productData,
-        price: parseFloat(productData.price),
-        stock_quantity: parseInt(productData.stock_quantity, 10),
-        updated_at: new Date().toISOString(), // Manually set updated_at if trigger is not reliable for all cases
-      };
-      // Remove id and created_at, added_by from payload if they exist, as they shouldn't be updated directly
-      delete productPayload.id;
-      delete productPayload.created_at;
-      delete productPayload.added_by;
-
-
-      const { data, error: updateError } = await supabase
-        .from('products')
-        .update(productPayload)
-        .eq('id', productId)
-        .select()
-        .single();
-      
-      if (updateError) throw updateError;
-
-      setProducts(prev => prev.map(p => p.id === productId ? data : p));
-      toast({ title: 'Sucesso!', description: 'Produto atualizado.' });
-      return data;
-    } catch (e) {
-      console.error("Error updating product:", e);
-      toast({ title: 'Erro ao atualizar produto', description: e.message, variant: 'destructive' });
-      return null;
-    }
-  };
-
-  const deleteProduct = async (productId) => {
-    if (!user) {
-      toast({ title: 'Não autorizado', description: 'Você precisa estar logado.', variant: 'destructive' });
-      return false;
-    }
-    try {
-      const { error: deleteError } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productId);
-
-      if (deleteError) throw deleteError;
-
-      setProducts(prev => prev.filter(p => p.id !== productId));
-      toast({ title: 'Sucesso!', description: 'Produto excluído.' });
-      return true;
-    } catch (e) {
-      console.error("Error deleting product:", e);
-      toast({ title: 'Erro ao excluir produto', description: e.message, variant: 'destructive' });
-      return false;
-    }
-  };
-  
-
-  const value = {
-    products,
-    loading,
-    error,
-    fetchProducts,
-    addProduct,
-    updateProduct,
-    deleteProduct,
-  };
-
-  return <ProductContext.Provider value={value}>{children}</ProductContext.Provider>;
+  return (
+    <ProductContext.Provider value={{
+      products,
+      loading,
+      fetchProducts,
+      addProduct,
+      updateProduct,
+      deleteProduct,
+    }}>
+      {children}
+    </ProductContext.Provider>
+  );
 };
 
 export const useProducts = () => {
   const context = useContext(ProductContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useProducts must be used within a ProductProvider');
   }
   return context;
