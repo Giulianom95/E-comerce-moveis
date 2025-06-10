@@ -55,7 +55,7 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
         setSelectedFile(validatedFile);
         
         // Criar preview local
-        const previewUrl = URL.createObjectURL(processedFile);
+        const previewUrl = URL.createObjectURL(validatedFile);
         setImagePreview(previewUrl);
       } catch (error) {
         toast({

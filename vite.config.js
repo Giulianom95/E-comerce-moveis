@@ -204,9 +204,20 @@ export default defineConfig({
 		allowedHosts: true,
 	},
 	resolve: {
-		extensions: ['.jsx', '.js', '.tsx', '.ts', '.json', ],
+		extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
 		alias: {
 			'@': path.resolve(__dirname, './src'),
 		},
-	}// Removed compression library config
+	},
+	build: {
+		outDir: 'dist',
+		assetsDir: 'assets',
+		sourcemap: false,
+		minify: 'esbuild',
+		rollupOptions: {
+			output: {
+				manualChunks: undefined
+			}
+		}
+	}
 });
