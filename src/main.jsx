@@ -7,14 +7,14 @@ import { supabase } from '@/lib/supabaseClient';
 
 async function initializeApp() {
   try {
-    // Testa a conexão com o Supabase
-    const { error } = await supabase.from('products').select('count', { count: 'exact' });
+    // Busca os produtos do Supabase
+    const { data: products, error } = await supabase.from('products').select('*');
     if (error) throw error;
 
-    // Se chegou aqui, a conexão está ok
+    // Renderiza a aplicação com os produtos
     ReactDOM.createRoot(document.getElementById('root')).render(
       <React.StrictMode>
-        <App />
+        <App products={products} />
         <Toaster />
       </React.StrictMode>
     );
