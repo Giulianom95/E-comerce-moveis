@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { uploadProductImage } from '@/lib/supabaseClient';
-import { validateAndCompressImage } from '@/lib/imageUtils';
+import { validateImage } from '@/lib/imageUtils';
 
 const definedCategories = ['utilidades', 'roupeiros', 'comodas', 'mesa', 'cadeira', 'sofa', 'decoracao', 'camas', 'armarios'];
 
@@ -50,9 +50,9 @@ const ProductForm = ({ product, onSubmit, onCancel }) => {
     const file = e.target.files[0];
     if (file) {
       try {
-        // Validar e comprimir a imagem
-        const processedFile = await validateAndCompressImage(file);
-        setSelectedFile(processedFile);
+        // Validar a imagem
+        const validatedFile = await validateImage(file);
+        setSelectedFile(validatedFile);
         
         // Criar preview local
         const previewUrl = URL.createObjectURL(processedFile);
