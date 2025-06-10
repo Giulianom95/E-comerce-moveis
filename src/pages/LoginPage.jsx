@@ -13,9 +13,9 @@ const LoginPage = () => {
   const { signIn, signInWithFacebook, user } = useAuth();
   const navigate = useNavigate();
 
-  React.useEffect(() => {
+  React.  useEffect(() => {
     if (user) {
-      navigate('/');
+      setTimeout(() => navigate('/'), 100);
     }
   }, [user, navigate]);
 

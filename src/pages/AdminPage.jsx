@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { uploadProductImage } from '@/lib/supabaseClient';
 import { validateImage } from '@/lib/imageUtils';
+import { ImageUploadTest } from '@/components/ImageUploadTest';
 
 const definedCategories = ['utilidades', 'roupeiros', 'comodas', 'mesa', 'cadeira', 'sofa', 'decoracao', 'camas', 'armarios'];
 
@@ -348,6 +349,11 @@ const AdminPage = () => {
                       </table>
                     </div>
                   )}
+                </div>
+
+                {/* Componente de teste de upload */}
+                <div className="mt-8 bg-white p-4 sm:p-6 rounded-xl shadow-lg">
+                  <ImageUploadTest />
                 </div>
               </motion.div>
             )}

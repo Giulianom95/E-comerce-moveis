@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Menu, X, Search, Home, Package, BedDouble, User, LogOut, LogIn, ShieldCheck } from 'lucide-react';
+import { ShoppingCart, Menu, X, Search, Home, Package, BedDouble, LogOut, LogIn, UserCircle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -105,9 +105,9 @@ const Header = () => {
                   size="icon"
                   onClick={handleSignOut}
                   className="hover:bg-pink-50 text-pink-600"
-                  title="Perfil"
+                  title="Sair da conta"
                 >
-                  <User className="w-5 h-5" />
+                  <LogOut className="w-5 h-5" />
                 </Button>
               </motion.div>
             ) : (
