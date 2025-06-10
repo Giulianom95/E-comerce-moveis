@@ -40,14 +40,13 @@ export const ProductProvider = ({ children }) => {
   }, [fetchProducts]);
 
   const addProduct = async (productData) => {
-    if (!user) {
-      toast({ title: 'Não autorizado', description: 'Você precisa estar logado.', variant: 'destructive' });
+    if (!user?.email?.includes('@admin')) {
+      toast({ title: 'Não autorizado', description: 'Apenas administradores podem adicionar produtos.', variant: 'destructive' });
       return null;
     }
     try {
       const productPayload = {
         ...productData,
-        added_by: user.id,
         price: parseFloat(productData.price),
         stock_quantity: parseInt(productData.stock_quantity, 10),
       };
