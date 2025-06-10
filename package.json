@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:supabase": "vite-node src/lib/testConnection.js"
+    "test:supabase": "vite-node src/lib/testConnection.js",
+    "test:facebook": "vite-node src/lib/testFacebookAuth.js"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "^1.2.1",

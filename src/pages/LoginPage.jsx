@@ -10,7 +10,7 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useAuth();
+  const { signIn, signInWithFacebook, user } = useAuth();
   const navigate = useNavigate();
 
   React.useEffect(() => {
@@ -29,6 +29,37 @@ const LoginPage = () => {
     setLoading(false);
   };
 
+  const handleFacebookLogin = async () => {
+    try {
+      setLoading(true);
+      const { error } = await signInWithFacebook();
+
+      if (error) {
+        toast({
+          title: 'Erro no login',
+          description: 'Não foi possível fazer login com o Facebook',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Login realizado',
+        description: 'Você foi conectado com sucesso!',
+      });
+      navigate('/');
+    } catch (error) {
+      console.error('Erro:', error);
+      toast({
+        title: 'Erro no login',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-orange-50 to-yellow-50 p-4">
       <motion.div
@@ -44,13 +75,18 @@ const LoginPage = () => {
             </div>
             <span className="text-3xl font-bold gradient-text">DormeBem</span>
           </Link>
-          <h1 className="text-2xl font-semibold text-gray-700">Bem-vindo de volta!</h1>
+          <h1 className="text-2xl font-semibold text-gray-700">
+            Bem-vindo de volta!
+          </h1>
           <p className="text-gray-500">Faça login para continuar.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Email
             </label>
             <div className="relative">
@@ -68,7 +104,10 @@ const LoginPage = () => {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Senha
             </label>
             <div className="relative">
@@ -84,7 +123,10 @@ const LoginPage = () => {
               />
             </div>
             <div className="text-right mt-1">
-              <Link to="#" className="text-sm text-pink-600 hover:underline">
+              <Link
+                to="#"
+                className="text-sm text-pink-600 hover:underline"
+              >
                 Esqueceu a senha?
               </Link>
             </div>
@@ -99,9 +141,22 @@ const LoginPage = () => {
           </Button>
         </form>
 
+        <div className="mt-4">
+          <Button
+            onClick={handleFacebookLogin}
+            disabled={loading}
+            className="w-full bg-[#1877F2] hover:bg-[#166FE5] text-white"
+          >
+            {loading ? 'Conectando...' : 'Entrar com Facebook'}
+          </Button>
+        </div>
+
         <p className="mt-8 text-center text-sm text-gray-600">
           Não tem uma conta?{' '}
-          <Link to="/cadastro" className="font-medium text-pink-600 hover:underline">
+          <Link
+            to="/cadastro"
+            className="font-medium text-pink-600 hover:underline"
+          >
             Cadastre-se
           </Link>
         </p>

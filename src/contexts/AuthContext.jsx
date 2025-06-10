@@ -199,6 +199,39 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const signInWithFacebook = async () => {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          scopes: 'email',
+          access_token: 'EAA4BnEJZBovkBO8MF6EQ2ZA8riEhRHPombzfwZAcxZCDHmqyZAyTWunD2giioNw68dEarlYJPmM5ytpNQGx92UO3gA0B7ZBJz1ZCaNK3RV4nf8hXCGIbWKZCTILzVgFW8egieHlPYjWtYZB3PJZCe0PXZCY6PMogM9yRDp7mktrtrKZCJacKUOTUumtJ32lF6d6n2EWjf5JSc45dbVYP91uBZBFsZAXsMLbMxrqVhsX9NSZCzGmGZBZAxUQTuoGJpPBZCdHUGrWQQkw8zOQwZDZD'
+        }
+      });
+
+      if (error) throw error;
+      
+      // Se o login for bem-sucedido, buscar informações do usuário do Facebook
+      if (data?.user) {
+        const { data: fbData, error: fbError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (!fbError && fbData) {
+          setProfile(fbData);
+          setIsAdmin(fbData.role === 'admin');
+        }
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Erro no login com Facebook:', error.message);
+      return { data: null, error };
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -207,7 +240,8 @@ export const AuthProvider = ({ children }) => {
     signOut,
     loading,
     isAdmin,
-    refreshAuthAdminStatus
+    refreshAuthAdminStatus,
+    signInWithFacebook
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
