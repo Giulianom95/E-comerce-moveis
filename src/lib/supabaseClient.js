@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://epxankmtukyjyybltajm.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVweGFua210dWt5anl5Ymx0YWptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk1MjMxODcsImV4cCI6MjA2NTA5OTE4N30.AWZbb2v6-lRgmqoXVJEyfa8CPIuf3WHpT2yljz-Hgc8';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('⚠️ Variáveis de ambiente do Supabase não encontradas. Usando valores padrão.');
+  throw new Error('As variáveis de ambiente do Supabase são obrigatórias. Por favor, configure VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no arquivo .env');
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -21,12 +21,33 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   realtime: {
     params: {
       eventsPerSecond: 10
-    }
+    },
+    // Configurações de reconexão
+    reconnect: true,
+    timeout: 10000, // 10 segundos
+    retries: 3
   },
   // Define um tempo maior para o refresh do token (3 horas e 45 minutos)
   autoRefreshTime: 13500000, // 3.75 horas em milissegundos
+  persistSession: true,
+  // Configurações de rede
+  headers: {
+    'X-Client-Info': 'e-commerce-moveis'
+  },
+  // Configurações de cache
+  shouldThrowOnError: true, // Lança erros em vez de retornar { error }
 });
 
+// Monitor de status da conexão
+supabase.realtime.on('disconnected', () => {
+  console.warn('⚠️ Conexão com Supabase perdida. Tentando reconectar...');
+});
+
+supabase.realtime.on('connected', () => {
+  console.info('✅ Conexão com Supabase estabelecida');
+});
+
+// Funções de upload
 export const uploadProductImage = async (file, fileName, onProgress) => {
   const MAX_RETRIES = 3;
   let attempt = 0;

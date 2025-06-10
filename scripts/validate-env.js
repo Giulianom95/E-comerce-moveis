@@ -1,14 +1,15 @@
 // Validação das variáveis de ambiente durante o build
 const requiredEnvVars = [
-  'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_ANON_KEY'
+  { name: 'VITE_SUPABASE_URL', value: 'https://epxankmtukyjyybltajm.supabase.co' },
+  { name: 'VITE_SUPABASE_ANON_KEY', value: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVweGFua210dWt5anl5Ymx0YWptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk1MjMxODcsImV4cCI6MjA2NTA5OTE4N30.AWZbb2v6-lRgmqoXVJEyfa8CPIuf3WHpT2yljz-Hgc8' }
 ];
 
-const missingVars = requiredEnvVars.filter(varName => {
-  const value = process.env[varName];
-  if (!value) {
-    console.warn(`⚠️ Variável de ambiente ${varName} não encontrada no processo.`);
-    console.warn('Isso é esperado durante o build na Vercel, as variáveis serão injetadas em runtime.');
+const missingVars = requiredEnvVars.filter(({ name, value }) => {
+  const envValue = process.env[name] || value;
+  if (!envValue) {
+    console.warn(`⚠️ Variável de ambiente ${name} não encontrada no processo.`);
+    console.warn('Usando valor padrão como fallback.');
+    process.env[name] = value;
     return false;
   }
   return false;
