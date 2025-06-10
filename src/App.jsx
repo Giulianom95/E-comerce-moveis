@@ -16,6 +16,7 @@ import AdminPage from '@/pages/AdminPage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import ChatWidget from '@/components/ChatWidget';
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
