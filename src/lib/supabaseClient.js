@@ -13,15 +13,14 @@ const isValidUrl = (url) => {
 // Debug detalhado do ambiente
 console.group('🔍 Diagnóstico de Inicialização');
 console.log('🌐 Ambiente:', {
-  mode: import.meta.env.MODE,
-  dev: import.meta.env.DEV,
-  prod: import.meta.env.PROD,
-  base: import.meta.env.BASE_URL
+  mode: process.env.NODE_ENV,
+  dev: process.env.NODE_ENV === 'development',
+  prod: process.env.NODE_ENV === 'production',
 });
 
 // Validação detalhada das variáveis
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.REACT_APP_SUPABASE_URL;
+const supabaseAnonKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 console.log('🔑 Variáveis Supabase:', {
   url: {
