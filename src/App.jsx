@@ -10,7 +10,7 @@ import AdminRoute from '@/components/AdminRoute';
 import ChatWidget from '@/components/ChatWidget';
 import { Toaster } from 'react-hot-toast';
 
-// Error Boundary Component
+// Error Boundary para capturar erros globais
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -22,23 +22,16 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    console.error('Erro capturado pelo ErrorBoundary:', error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center p-8">
-            <h1 className="text-2xl font-bold text-red-600 mb-4">Oops! Algo deu errado</h1>
-            <p className="text-gray-600 mb-4">Tente recarregar a página</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Recarregar
-            </button>
-          </div>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', flexDirection: 'column', textAlign: 'center' }}>
+          <h1 style={{ color: '#dc2626', fontSize: 24, marginBottom: 16 }}>⚠️ Erro ao carregar a aplicação</h1>
+          <p style={{ color: '#374151', marginBottom: 16 }}>Ocorreu um erro inesperado.<br/>Verifique o console do navegador para detalhes.<br/>Se persistir, confira as variáveis de ambiente no painel da Vercel.</p>
+          <button onClick={() => window.location.reload()} style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', border: 'none', borderRadius: 4, cursor: 'pointer', fontSize: 16 }}>Recarregar</button>
         </div>
       );
     }
