@@ -16,11 +16,26 @@ const missingEnvVars = Object.entries(requiredEnvVars)
 
 if (missingEnvVars.length > 0) {
   console.error('❌ Variáveis de ambiente ausentes:', missingEnvVars.join(', '));
-  document.body.innerHTML = `
-    <div style="padding: 20px; color: red; text-align: center;">
-      <h1>Erro de Configuração</h1>
-      <p>Variáveis de ambiente ausentes: ${missingEnvVars.join(', ')}</p>
-      <p>Por favor, configure as variáveis de ambiente necessárias.</p>
+  const rootElement = document.getElementById('root') || document.body;
+  rootElement.innerHTML = `
+    <div style="
+      padding: 20px;
+      color: #EF4444;
+      text-align: center;
+      font-family: system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background: #F9FAFB;
+    ">
+      <h1 style="font-size: 24px; margin-bottom: 16px;">⚠️ Erro de Configuração</h1>
+      <p style="margin-bottom: 16px;">As seguintes variáveis de ambiente estão faltando:</p>
+      <ul style="list-style: none; padding: 0; margin-bottom: 16px;">
+        ${missingEnvVars.map(v => `<li style="margin: 8px 0; padding: 8px 16px; background: #FEE2E2; border-radius: 4px;">${v}</li>`).join('')}
+      </ul>
+      <p>Por favor, configure as variáveis de ambiente necessárias no arquivo .env</p>
     </div>
   `;
 } else {
@@ -28,6 +43,6 @@ if (missingEnvVars.length > 0) {
     <React.StrictMode>
       <App />
       <Toaster />
-    </React.StrictMode>,
+    </React.StrictMode>
   );
 }
